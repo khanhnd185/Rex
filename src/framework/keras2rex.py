@@ -7,6 +7,8 @@ from keras.layers import (
   Reshape,
   GlobalAveragePooling2D,
   ZeroPadding2D,
+  Add,
+  Dense
 )
 
 from src.framework.rex import (
@@ -17,6 +19,8 @@ from src.framework.rex import (
   RexZeroPadding2D,
   RexReshape,
   RexGlobalAveragePooling2D,
+  RexAdd,
+  RexDense,
 )
 
 class Keras2RexGenerator():
@@ -73,9 +77,19 @@ class Keras2RexGenerator():
               _layer = RexConv2D(args=args)
         else: _layer = RexDepthwiseConv2D(args=args)
         module.add_layer(_layer, L0, [LN1], weights=weights)
+      elif (isinstance(L0, Dense)):
+        weights = [_.numpy() for _ in L0.weights]
+        args = {
+          "in_channels"        : L0.input_shape[-1],
+          "units"              : L0.units,
+          "use_bias"           : L0.use_bias,
+          "activation"         : "'relu6'" if isinstance(L0.activation, ReLU) else None,
+        }
+        module.add_layer(RexDense(args=args), L0, [LN1], weights=weights)
       elif (isinstance(L0, GlobalAveragePooling2D)):
         args  = {
           "kernel_size"       : L0.input_shape[1:3], # Torch exclusive argument
+          "keepdims"          : L0.keepdims
         }
         module.add_layer(RexGlobalAveragePooling2D(args=args), L0, [LN1])
       elif (isinstance(L0, Reshape)):
@@ -83,6 +97,8 @@ class Keras2RexGenerator():
         module.add_layer(RexReshape(args={'target_shape':(-1, *L0.output_shape[1:])}), L0, [LN1])
       elif (isinstance(L0, ZeroPadding2D)):
         module.add_layer(RexZeroPadding2D(args={'padding':L0.padding}), L0, [LN1])
+      elif (isinstance(L0, Add)):
+        module.add_layer(RexAdd(),L0, LN1)
       else: raise NotImplementedError(f"Unknown layer '{L0.__class__.__name__}' provided")
 
     print(module.summary())

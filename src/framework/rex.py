@@ -27,6 +27,37 @@ class RexZeroPadding2D(RexBase):
     }
     self.update_args(args)
 
+class RexAdd(RexBase):
+  def __init__(self, args={}):
+    super().__init__()
+    self.class_name = "torch.add"
+    self.object_name = "torch.add"
+    self.prefix = ""
+    self.arguments  = {}
+    self.update_args(args)
+
+  def set_object_name(self, name):
+    return
+
+  def gen_init(self):
+    return ""
+
+  def gen_call(self, returns, args):
+    args = ",".join(args)
+    return f"{returns} = {self.prefix}{self.object_name}({args})"
+
+class RexDense(RexBase):
+  def __init__(self, args={}):
+    super().__init__()
+    self.class_name = "TRex.Dense"
+    self.arguments  = {
+      "in_channels"       : -1,
+      "units"             : -1,
+      "use_bias"          : True,
+      "activation"        : None
+    }
+    self.update_args(args)
+
 class RexConv2D(RexBase):
   def __init__(self, args={}):
     super().__init__()
@@ -67,6 +98,7 @@ class RexGlobalAveragePooling2D(RexBase):
     self.class_name = "TRex.GlobalAveragePooling2D"
     self.arguments  = {
       "kernel_size"       : (1,1),
+      "keepdims"          : True,
     }
     self.update_args(args)
 
@@ -98,12 +130,20 @@ class RexModule(RexBase, Graph):
     if weights != None:
       if isinstance(data, RexDepthwiseConv2D):
         k = np.moveaxis(weights[0], [2,3], [0,1])
-      else:
+      elif isinstance(data, RexConv2D):
         k = np.moveaxis(weights[0], [2,3], [1,0])
+      else:
+        k = np.transpose(weights[0])
       prefix = "d." if self.use_module_dict else ""
-      self.state_dict[prefix+vertex_name+".conv.weight"] = torch.nn.Parameter(torch.Tensor(k), requires_grad=True)
-      if len(weights) > 1:
-        self.state_dict[prefix+vertex_name+".conv.bias"] = torch.nn.Parameter(torch.Tensor(weights[1]), requires_grad=True)
+      
+      if isinstance(data, (RexDepthwiseConv2D, RexConv2D)):
+        self.state_dict[prefix+vertex_name+".conv.weight"] = torch.nn.Parameter(torch.Tensor(k), requires_grad=True)
+        if len(weights) > 1:
+          self.state_dict[prefix+vertex_name+".conv.bias"] = torch.nn.Parameter(torch.Tensor(weights[1]), requires_grad=True)
+      else:
+        self.state_dict[prefix+vertex_name+".linear.weight"] = torch.nn.Parameter(torch.Tensor(k), requires_grad=True)
+        if len(weights) > 1:
+          self.state_dict[prefix+vertex_name+".linear.bias"] = torch.nn.Parameter(torch.Tensor(weights[1]), requires_grad=True)
 
   def set_output(self, outputs):
     self.outputs = [self.get_name(_) for _ in outputs]

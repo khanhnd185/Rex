@@ -8,5 +8,5 @@ Rex helps you convert Keras to Pytorch models and more.
 ## Supported models
 
 - Mobilenetv1
-- SSDMobilenetv2
+- Mobilenetv2
 - EfficientDet

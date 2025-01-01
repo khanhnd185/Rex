@@ -2,4 +2,11 @@
 
 Rex helps you convert Keras to Pytorch models and more.
 
-![Architecture of our model](https://raw.githubusercontent.com/khanhnd185/Rex/master/rex.jpg)
+![Architecture of our model](rex.jpg)
+
+
+## Supported models
+
+- Mobilenetv1
+- SSDMobilenetv2
+- EfficientDet
